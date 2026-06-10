@@ -6,7 +6,7 @@
     "dev": "nodemon server.js",
     "start": "node server.js",
     "test": "jest --runInBand --forceExit",
-    "seed": "node src/database/seed.js"
+    "seed": "node database/seed.js"
   },
   "keywords": [],
   "author": "",

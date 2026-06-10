@@ -1,7 +1,17 @@
 const request = require("supertest");
-const app = require("../../app");
+const app = require("../app");
 
 let accessToken, refreshToken;
+
+beforeAll(async () => {
+  // Register sample users so login works in tests
+  await request(app).post("/api/auth/register").send({
+    name: "Dev Dana", email: "dev@shipyard.dev", password: "dev123", role: "dev",
+  });
+  await request(app).post("/api/auth/register").send({
+    name: "Alice Admin", email: "admin@shipyard.dev", password: "admin123", role: "admin",
+  });
+});
 
 describe("Auth Endpoints", () => {
   it("POST /api/auth/register - creates a new user", async () => {

@@ -1,12 +1,24 @@
 const request = require("supertest");
-const app = require("../../app");
+const app = require("../app");
 
 let adminToken, devToken, projectId;
 
 beforeAll(async () => {
-  const adminRes = await request(app).post("/api/auth/login").send({ email: "admin@shipyard.dev", password: "admin123" });
+  await request(app).post("/api/auth/register").send({
+    name: "Dev Dana", email: "dev@shipyard.dev", password: "dev123", role: "dev",
+  });
+  await request(app).post("/api/auth/register").send({
+    name: "Alice Admin", email: "admin@shipyard.dev", password: "admin123", role: "admin",
+  });
+
+  const adminRes = await request(app).post("/api/auth/login").send({
+    email: "admin@shipyard.dev", password: "admin123",
+  });
   adminToken = adminRes.body.accessToken;
-  const devRes = await request(app).post("/api/auth/login").send({ email: "dev@shipyard.dev", password: "dev123" });
+
+  const devRes = await request(app).post("/api/auth/login").send({
+    email: "dev@shipyard.dev", password: "dev123",
+  });
   devToken = devRes.body.accessToken;
 });
 
