@@ -28,6 +28,9 @@ jspm_packages/
 /local-*.env
 .env.docker
 
+# SQLite database
+*.db
+
 # Build outputs
 dist/
 build/
