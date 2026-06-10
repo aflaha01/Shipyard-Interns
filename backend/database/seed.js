@@ -1,43 +1,29 @@
 require("dotenv").config({ path: require("path").resolve(__dirname, "../.env") });
 const bcrypt = require("bcryptjs");
-const db = require("../config/db");
+const { User, Project, syncDB } = require("../src/models");
 
-const users = [
-  { name: "Alice Admin", email: "admin@shipyard.dev", password: "admin123", role: "admin" },
-  { name: "Leo Lead",    email: "lead@shipyard.dev",  password: "lead123",  role: "lead"  },
-  { name: "Dev Dana",   email: "dev@shipyard.dev",   password: "dev123",   role: "dev"   },
-];
+const seed = async () => {
+  await syncDB();
 
-const projects = [
-  { name: "Alpha", description: "First project",  status: "active",   ownerEmail: "lead@shipyard.dev" },
-  { name: "Beta",  description: "Second project", status: "inactive", ownerEmail: "dev@shipyard.dev"  },
-];
+  await User.destroy({ truncate: true });
+  await Project.destroy({ truncate: true });
 
-setTimeout(() => {
-  db.serialize(() => {
-    db.run("DELETE FROM projects");
-    db.run("DELETE FROM users");
+  const users = await User.bulkCreate([
+    { name: "Alice Admin", email: "admin@shipyard.dev", password: bcrypt.hashSync("admin123", 10), role: "admin" },
+    { name: "Leo Lead",    email: "lead@shipyard.dev",  password: bcrypt.hashSync("lead123",  10), role: "lead"  },
+    { name: "Dev Dana",    email: "dev@shipyard.dev",   password: bcrypt.hashSync("dev123",   10), role: "dev"   },
+  ]);
 
-    users.forEach(({ name, email, password, role }) => {
-      db.run(
-        "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)",
-        [name, email, bcrypt.hashSync(password, 10), role]
-      );
-    });
+  const lead = users.find(u => u.role === "lead");
+  const dev  = users.find(u => u.role === "dev");
 
-    // Insert projects after users
-    setTimeout(() => {
-      projects.forEach(({ name, description, status, ownerEmail }) => {
-        db.get("SELECT id FROM users WHERE email = ?", [ownerEmail], (err, user) => {
-          if (user) {
-            db.run(
-              "INSERT INTO projects (name, description, owner_id, status) VALUES (?, ?, ?, ?)",
-              [name, description, user.id, status]
-            );
-          }
-        });
-      });
-      console.log("✅ Seed complete");
-    }, 300);
-  });
-}, 500);
+  await Project.bulkCreate([
+    { name: "Alpha", description: "First project",  status: "active",   owner_id: lead.id },
+    { name: "Beta",  description: "Second project", status: "inactive", owner_id: dev.id  },
+  ]);
+
+  console.log("✅ Seed complete");
+  process.exit(0);
+};
+
+seed().catch(err => { console.error(err); process.exit(1); });

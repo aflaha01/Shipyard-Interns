@@ -1,3 +1,4 @@
+// Legacy raw SQLite connection — kept for reference. Use src/config/database.js (Sequelize) instead.
 const sqlite3 = require("sqlite3").verbose();
 const path = require("path");
 

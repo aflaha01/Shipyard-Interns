@@ -1,42 +1,44 @@
 const bcrypt = require("bcryptjs");
-const db = require("../config/db");
+const { User } = require("../models");
 const { signAccess, signRefresh, verify } = require("../utils/jwt");
 
 const refreshTokens = new Set();
 
-exports.register = (req, res) => {
+exports.register = async (req, res) => {
   const { name, email, password, role } = req.body;
   const validRoles = ["dev", "lead", "admin"];
 
   if (!name || !email || !password || !role)
     return res.status(400).json({ error: "All fields are required" });
-  if (!validRoles.includes(role))
-    return res
-      .status(400)
-      .json({ error: "Role must be one of: dev, lead, admin" });
 
-  const hash = bcrypt.hashSync(password, 10);
-  db.run(
-    "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)",
-    [name, email, hash, role],
-    function (err) {
-      if (err) {
-        if (err.message.includes("UNIQUE"))
-          return res.status(409).json({ error: "Email already registered" });
-        return res.status(500).json({ error: "Registration failed" });
-      }
-      res.status(201).json({ message: "User registered", userId: this.lastID });
-    }
-  );
+  
+  if (!validRoles.includes(role))
+    return res.status(400).json({ error: "Invalid request" });
+
+  try {
+    const hash = bcrypt.hashSync(
+      password,
+      process.env.NODE_ENV === "test" ? 1 : 10
+    );
+    const user = await User.create({ name, email, password: hash, role });
+    res.status(201).json({ message: "User registered", userId: user.id });
+  } catch (err) {
+  
+    if (err.name === "SequelizeUniqueConstraintError")
+      return res.status(409).json({ error: "Registration failed" });
+    res.status(500).json({ error: "Registration failed" });
+  }
 };
 
-exports.login = (req, res) => {
+exports.login = async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password)
-    return res.status(400).json({ error: "Email and password are required" });
+    return res.status(400).json({ error: "Invalid credentials" });
 
-  db.get("SELECT * FROM users WHERE email = ?", [email], (err, user) => {
-    if (err) return res.status(500).json({ error: "Login failed" });
+  try {
+    const user = await User.findOne({ where: { email } });
+
+    // Same generic message whether email missing or password wrong
     if (!user || !bcrypt.compareSync(password, user.password))
       return res.status(401).json({ error: "Invalid credentials" });
 
@@ -46,13 +48,15 @@ exports.login = (req, res) => {
     refreshTokens.add(refreshToken);
 
     res.json({ accessToken, refreshToken });
-  });
+  } catch {
+    res.status(500).json({ error: "Unauthorized" });
+  }
 };
 
 exports.refresh = (req, res) => {
   const { refreshToken } = req.body;
   if (!refreshToken || !refreshTokens.has(refreshToken))
-    return res.status(401).json({ error: "Invalid refresh token" });
+    return res.status(401).json({ error: "Unauthorized" });
 
   try {
     const payload = verify(refreshToken);
@@ -64,7 +68,7 @@ exports.refresh = (req, res) => {
     res.json({ accessToken: newAccess });
   } catch {
     refreshTokens.delete(refreshToken);
-    res.status(401).json({ error: "Refresh token expired, please login again" });
+    res.status(401).json({ error: "Unauthorized" });
   }
 };
 
