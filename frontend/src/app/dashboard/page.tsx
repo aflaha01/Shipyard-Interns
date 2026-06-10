@@ -7,7 +7,7 @@ import type { Project } from "@/types";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const user = typeof window !== "undefined" ? getUser() : null;
+  const [user, setUser] = useState<{ id: number; email: string; role: string } | null>(null);
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [total, setTotal] = useState(0);
@@ -40,9 +40,10 @@ export default function DashboardPage() {
   }, [page]);
 
   useEffect(() => {
-    if (!isLoggedIn()) { router.replace("/login"); return; }
-    fetchProjects();
-  }, [fetchProjects, router]);
+  if (!isLoggedIn()) { router.replace("/login"); return; }
+  setUser(getUser());
+  fetchProjects();
+}, [fetchProjects, router]);
 
   const handleLogout = async () => {
     const rt = localStorage.getItem("refreshToken") || "";
