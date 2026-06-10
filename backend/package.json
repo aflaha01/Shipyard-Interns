@@ -3,10 +3,11 @@
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
-  "dev": "nodemon server.js",
-  "start": "node server.js",
-  "test": "jest"
-},
+    "dev": "nodemon server.js",
+    "start": "node server.js",
+    "test": "jest",
+    "seed": "node src/database/seed.js"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
